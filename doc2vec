@@ -13,18 +13,18 @@ from sklearn.decomposition import PCA
 from gensim.models import Doc2Vec
 from kmodes.kmodes import KModes
 
-train= pd.read_csv('textSum.csv')
+train= pd.read_csv('output.csv')
 
 LabeledSentence1 = gensim.models.doc2vec.TaggedDocument
 all_content_train = []
 j=0
-for em in train['text'].values:
+for em in train['Article'].values:
     all_content_train.append(LabeledSentence1(em,[j]))
     j+=1
 print("Number of texts processed: ", j)
 
 d2v_model = Doc2Vec(all_content_train, size = 100, window = 10, min_count = 500, workers=7, dm = 1,alpha=0.025, min_alpha=0.001)
-d2v_model.train(all_content_train, total_examples=d2v_model.corpus_count, epochs=100, start_alpha=0.001, end_alpha=-0.006)
+d2v_model.train(all_content_train, total_examples=d2v_model.corpus_count, epochs=1000, start_alpha=0.001, end_alpha=-0.006)
 
 kmeans_model = KMeans(n_clusters=6, init='k-means++', max_iter=1000)
 X = kmeans_model.fit(d2v_model.docvecs.doctag_syn0)
@@ -32,19 +32,19 @@ labels=kmeans_model.labels_.tolist()
 l = kmeans_model.fit_predict(d2v_model.docvecs.doctag_syn0)
 pca = PCA(n_components=2).fit(d2v_model.docvecs.doctag_syn0)
 datapoint = pca.transform(d2v_model.docvecs.doctag_syn0)
-print("***--The K-Means Cluster Centroids \n")
-print(X.cluster_centers_)
+print("***--The K-Means Story Clusters \n")
+print(labels)
 
 
-# random categorical data
 
-km = KModes(n_clusters=6, init='Huang', n_init=5, verbose=1)
+km = KModes(n_clusters=6, init='Huang', n_init=5, max_iter= 1000,verbose=1)
 
 clusters = km.fit(d2v_model.docvecs.doctag_syn0)
-
+kmodes_labels=clusters.labels_.tolist()
 # Print the cluster centroids
-print("***--The K-Modes Cluster Centroids :\n")
-print(km.cluster_centroids_)
+print("***--The K-Modes Story Clusters :\n")
+print(kmodes_labels)
+#print(km.cluster_centroids_)
 
 import matplotlib.pyplot as plt
 #matplotlib inline
@@ -61,3 +61,20 @@ centroidpoint = pca.transform(centroids)
 #for ploting centroids
 plt.scatter(centroidpoint[:, 0], centroidpoint[:, 1], marker='^', s=150, c='#000000')
 plt.show()
+
+####################### Plotting K Modes Graph ########################
+
+plt.figure
+label2 = ["#FF2200", "#008000", "#0000FF", "#800080","#800090","#800000"]
+color = [label2[i] for i in labels]
+#for ploting stories
+plt.scatter(datapoint[:, 0], datapoint[:, 1], c=color)
+
+centroids = km.cluster_centroids_
+#do the PCA to reduce the dimensssion
+centroidpoint = pca.transform(centroids)
+#for ploting centroids
+plt.scatter(centroidpoint[:, 0], centroidpoint[:, 1], marker='*', s=150, c='#000000')
+plt.show()
+
+###################### End K Modes Graph Plot #######################
